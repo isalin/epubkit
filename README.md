@@ -1,8 +1,25 @@
 # epubkit
 
-`epubkit` is a TypeScript EPUB library and Node.js `epub` command-line tool for inspecting, editing, merging, unpacking, and managing EPUB files.
+[![npm version](https://img.shields.io/npm/v/@isalin/epubkit.svg)](https://www.npmjs.com/package/@isalin/epubkit)
+[![CI](https://github.com/isalin/epubkit/actions/workflows/ci.yml/badge.svg)](https://github.com/isalin/epubkit/actions/workflows/ci.yml)
+[![Node.js](https://img.shields.io/node/v/@isalin/epubkit.svg)](https://www.npmjs.com/package/@isalin/epubkit)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Use it as an EPUB metadata editor, EPUB merge tool, EPUB cover image utility, or a small JavaScript/TypeScript API for EPUB automation.
+`epubkit` is a TypeScript EPUB library and Node.js `epub` command-line tool for inspecting EPUB archives, editing EPUB metadata, merging EPUB 2 and EPUB 3 files, unpacking merged books, and managing cover images.
+
+Use it as an EPUB metadata editor, EPUB merge tool, EPUB cover image utility, EPUB inspector, or JavaScript/TypeScript API for EPUB automation.
+
+## Contents
+
+- [Features](#features)
+- [Use Cases](#use-cases)
+- [Install](#install)
+- [CLI](#cli)
+- [Library](#library)
+- [API Overview](#api-overview)
+- [FAQ](#faq)
+- [Safety Notes](#safety-notes)
+- [Development](#development)
 
 ## Features
 
@@ -12,6 +29,15 @@ Use it as an EPUB metadata editor, EPUB merge tool, EPUB cover image utility, or
 - Unpack EPUBs produced by `epubkit merge` back into their original source files.
 - Extract, set, replace, and repair EPUB cover image metadata.
 - Use the same EPUB tools from the `epub` CLI or from TypeScript and JavaScript.
+
+## Use Cases
+
+- Edit EPUB metadata from the command line or a Node.js script.
+- Merge EPUB files into a combined edition with generated navigation.
+- Extract, replace, or repair EPUB cover images and cover metadata.
+- Inspect EPUB structure, package paths, manifest entries, spine entries, and navigation files.
+- Automate ebook workflows with a typed TypeScript EPUB library.
+- Update standalone OPF package metadata without rebuilding a full EPUB archive.
 
 ## Install
 
@@ -25,7 +51,7 @@ For the CLI as a global command:
 npm install -g @isalin/epubkit
 ```
 
-`epubkit` requires Node.js 20 or newer.
+`epubkit` requires Node.js 20 or newer. The CLI binary is named `epub`.
 
 ## CLI
 
@@ -149,6 +175,48 @@ await replaceCover("book.epub", "new-cover.jpg", {
 ```
 
 The package also exports helpers for reading and writing EPUB archives, reading standalone OPF files, detecting covers, applying metadata patches, and working with public TypeScript types such as `EpubMetadata`, `MetadataPatch`, `MergeOptions`, and `CoverInfo`.
+
+## API Overview
+
+- `readInfo`, `readEpub`, and `readStandaloneOpf` inspect EPUB archives and OPF package files.
+- `readMetadata`, `readMetadataFromOpf`, `updateMetadata`, and `applyMetadataPatch` read and edit ebook metadata.
+- `mergeEpubs` and `unpackMergedEpub` combine EPUB files and restore EPUBs created by `epubkit merge`.
+- `detectCover`, `extractCover`, `setCover`, `replaceCover`, and `repairCover` manage EPUB cover images and cover metadata.
+- `readArchive`, `readArchiveFile`, `writeArchive`, and `writeArchiveFile` provide lower-level ZIP archive helpers.
+
+## FAQ
+
+### How do I edit EPUB metadata from the command line?
+
+Use `epub meta` with metadata options:
+
+```sh
+epub meta book.epub -t "New Title" -a "Author Name" -l en
+```
+
+### How do I merge multiple EPUB files?
+
+Use `epub merge` and pass each input EPUB followed by an output path:
+
+```sh
+epub merge volume-1.epub volume-2.epub -o combined.epub
+```
+
+### Can I use epubkit from TypeScript?
+
+Yes. `@isalin/epubkit` ships TypeScript declarations and exports typed APIs for metadata, EPUB inspection, cover handling, archive helpers, merge options, and EPUB result types.
+
+### Does epubkit work with OPF files?
+
+Yes. `epub meta` and the library metadata helpers can read or update standalone `.opf` package files.
+
+### Does epubkit support EPUB 2 and EPUB 3?
+
+Yes. `epubkit` can inspect and merge EPUB 2 and EPUB 3 files. EPUBs in a single merge must use the same EPUB version.
+
+### Can I replace an EPUB cover image?
+
+Yes. Use `epub cover replace book.epub new-cover.jpg`, or call `replaceCover()` from JavaScript or TypeScript.
 
 ## Safety Notes
 

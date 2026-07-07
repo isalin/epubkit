@@ -1,10 +1,14 @@
 {
   "name": "@isalin/epubkit",
   "version": "1.0.0",
-  "description": "A TypeScript library and CLI for inspecting, editing, merging, and unpacking EPUB files.",
+  "description": "TypeScript EPUB library and Node.js CLI for editing metadata, merging files, managing covers, and inspecting archives.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/isalin/epubkit.git"
+  },
+  "homepage": "https://github.com/isalin/epubkit#readme",
+  "bugs": {
+    "url": "https://github.com/isalin/epubkit/issues"
   },
   "type": "module",
   "bin": {
@@ -28,9 +32,22 @@
   },
   "keywords": [
     "epub",
+    "epub2",
+    "epub3",
     "ebook",
+    "ebooks",
+    "opf",
     "metadata",
-    "cli"
+    "epub-metadata",
+    "epub-editor",
+    "epub-merge",
+    "epub-cover",
+    "ebook-tools",
+    "node",
+    "nodejs",
+    "cli",
+    "typescript",
+    "typescript-library"
   ],
   "license": "MIT",
   "engines": {
