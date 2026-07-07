@@ -34,6 +34,90 @@ Commands:
   cover     Get, set, replace, or repair cover images.
 `;
 
+const MERGE_HELP = `epubkit merge
+
+Usage:
+  epub merge <a.epub> <b.epub> ... -o <out.epub>
+  epub merge <a.epub> <b.epub> ... -d <dir> [-n name]
+
+Options:
+  -o, --output <file>      Write the merged EPUB to this path.
+  -d, --dir <dir>         Write a derived output file into this directory.
+  -n, --name <name>       Use this output filename with --dir.
+  -t, --title <title>     Set the merged EPUB title.
+  -l, --language <lang>   Set the merged EPUB language.
+  -v, --volumes <labels>  Use //-separated volume labels.
+  -V, --volume-labels-from-files
+                          Use input filenames as volume labels.
+  -p, --prefix <text>     Set the generated volume label prefix.
+  -s, --suffix <text>     Set the generated volume label suffix.
+  -O, --preserve-order    Keep input order instead of sorting by reading order.
+  -f, --force             Overwrite an existing output file.
+  -q, --quiet             Suppress the written-file message.
+`;
+
+const META_HELP = `epubkit meta
+
+Usage:
+  epub meta <book.epub|content.opf>
+  epub meta <book.epub|content.opf> [options]
+
+Options:
+  --json                    Print metadata as JSON.
+  -t, --title <title>       Set title.
+  -a, --author <value>      Set author. Use Name--Sort Name for file-as.
+  -r, --translator <value>  Set translator. Use Name--Sort Name for file-as.
+  -s, --subject <value>     Set subjects. Repeat or separate with //.
+  -p, --publisher <value>   Set publisher.
+  -l, --language <lang>     Set language.
+  -d, --description <text>  Set description.
+  -i, --isbn <isbn>         Set ISBN.
+  -x, --rights <text>       Set rights.
+  -u, --published <date>    Set published date.
+  -m, --modified <date>     Set modified date.
+  -q, --quiet               Suppress update messages.
+`;
+
+const INFO_HELP = `epubkit info
+
+Usage:
+  epub info <book.epub>
+
+Summary:
+  Shows title, EPUB version, language, contributors, OPF path, file counts,
+  spine counts, navigation paths, and cover path when present.
+`;
+
+const UNPACK_HELP = `epubkit unpack
+
+Usage:
+  epub unpack <merged.epub> [-d dir] [-f]
+
+Options:
+  -d, --dir <dir>  Write restored EPUB files into this directory.
+  -f, --force      Overwrite existing restored files.
+`;
+
+const COVER_HELP = `epubkit cover
+
+Usage:
+  epub cover get <book.epub> [-o cover.ext] [-f]
+  epub cover set <book.epub> <image> [-o updated.epub] [-f]
+  epub cover replace <book.epub> <image> [-o updated.epub] [-f]
+  epub cover fix <book.epub> [-o updated.epub] [-f]
+
+Actions:
+  get      Extract the detected cover image.
+  set      Add or update cover metadata for an image.
+  replace  Replace an existing cover image.
+  fix      Repair cover metadata for an existing image.
+
+Options:
+  -o, --output <path>  For get, write the cover image to this path.
+                       For set, replace, and fix, write the updated EPUB to this path.
+  -f, --force          Overwrite an existing output file.
+`;
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   if (!command || command === "-h" || command === "--help") {
@@ -49,6 +133,10 @@ async function main(): Promise<void> {
 }
 
 async function runMerge(args: string[]): Promise<void> {
+  if (isCommandHelpRequest(args)) {
+    console.log(MERGE_HELP.trimEnd());
+    return;
+  }
   const parsed = parseArgs(args);
   const output = optString(parsed, "o", "output");
   const title = optString(parsed, "t", "title");
@@ -77,6 +165,10 @@ async function runMerge(args: string[]): Promise<void> {
 }
 
 async function runMeta(args: string[]): Promise<void> {
+  if (isCommandHelpRequest(args)) {
+    console.log(META_HELP.trimEnd());
+    return;
+  }
   const parsed = parseArgs(args);
   const source = parsed.positionals[0];
   if (!source) throw new Error("meta requires an EPUB or OPF path");
@@ -96,6 +188,10 @@ async function runMeta(args: string[]): Promise<void> {
 }
 
 async function runInfo(args: string[]): Promise<void> {
+  if (isCommandHelpRequest(args)) {
+    console.log(INFO_HELP.trimEnd());
+    return;
+  }
   const file = args[0];
   if (!file) throw new Error("info requires an EPUB path");
   const info = await readInfo(file);
@@ -113,6 +209,10 @@ async function runInfo(args: string[]): Promise<void> {
 }
 
 async function runUnpack(args: string[]): Promise<void> {
+  if (isCommandHelpRequest(args)) {
+    console.log(UNPACK_HELP.trimEnd());
+    return;
+  }
   const parsed = parseArgs(args);
   const source = parsed.positionals[0];
   if (!source) throw new Error("unpack requires a merged EPUB path");
@@ -124,6 +224,10 @@ async function runUnpack(args: string[]): Promise<void> {
 }
 
 async function runCover(args: string[]): Promise<void> {
+  if (isCommandHelpRequest(args)) {
+    console.log(COVER_HELP.trimEnd());
+    return;
+  }
   const [action, ...rest] = args;
   const parsed = parseArgs(rest);
   const book = parsed.positionals[0];
@@ -153,6 +257,10 @@ async function runCover(args: string[]): Promise<void> {
     return;
   }
   throw new Error(`Unknown cover action: ${action}`);
+}
+
+function isCommandHelpRequest(args: string[]): boolean {
+  return args.length === 0 || (args.length === 1 && (args[0] === "-h" || args[0] === "--help"));
 }
 
 function parseArgs(args: string[]): Parsed {

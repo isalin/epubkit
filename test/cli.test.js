@@ -21,6 +21,50 @@ test("prints command help when called without arguments", async () => {
   assert.match(stdout, /Commands:/);
 });
 
+test("prints subcommand help summaries", async () => {
+  const merge = await run(["merge"]);
+  assert.match(merge.stdout, /epubkit merge/);
+  assert.match(merge.stdout, /epub merge <a\.epub> <b\.epub>/);
+  assert.match(merge.stdout, /--volume-labels-from-files/);
+  assert.match(merge.stdout, /--prefix <text>/);
+  assert.match(merge.stdout, /--suffix <text>/);
+
+  const meta = await run(["meta", "--help"]);
+  assert.match(meta.stdout, /epubkit meta/);
+  assert.match(meta.stdout, /epub meta <book\.epub\|content\.opf>/);
+  assert.match(meta.stdout, /--json/);
+
+  const info = await run(["info", "--help"]);
+  assert.match(info.stdout, /epubkit info/);
+  assert.match(info.stdout, /epub info <book\.epub>/);
+
+  const unpack = await run(["unpack", "--help"]);
+  assert.match(unpack.stdout, /epubkit unpack/);
+  assert.match(unpack.stdout, /epub unpack <merged\.epub>/);
+
+  const cover = await run(["cover"]);
+  assert.match(cover.stdout, /epubkit cover/);
+  assert.match(cover.stdout, /epub cover get <book\.epub>/);
+  assert.match(cover.stdout, /epub cover set <book\.epub> <image> \[-o updated\.epub\] \[-f\]/);
+  assert.match(cover.stdout, /replace  Replace an existing cover image/);
+  assert.match(cover.stdout, /For get, write the cover image to this path/);
+  assert.match(cover.stdout, /For set, replace, and fix, write the updated EPUB to this path/);
+
+  const coverHelp = await run(["cover", "--help"]);
+  assert.match(coverHelp.stdout, /epubkit cover/);
+  assert.match(coverHelp.stdout, /epub cover fix <book\.epub>/);
+});
+
+test("subcommand help does not mask partial invocations", async () => {
+  await assert.rejects(
+    () => run(["merge", "one.epub"]),
+    (error) => {
+      assert.match(error.stderr, /merge requires at least two EPUB files/);
+      return true;
+    }
+  );
+});
+
 test("published declarations compile for Node-only TypeScript consumers", async () => {
   const dir = await tempDir();
   const project = path.join(dir, "consumer");

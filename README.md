@@ -98,6 +98,7 @@ epub merge volume-1.epub volume-2.epub -o combined.epub -t "Combined Edition" -l
 epub merge volume-1.epub volume-2.epub -o combined.epub --preserve-order
 epub merge volume-1.epub volume-2.epub -o combined.epub --volumes "Book One//Book Two"
 epub merge volume-1.epub volume-2.epub -o combined.epub --volume-labels-from-files
+epub merge volume-1.epub volume-2.epub -o combined.epub --prefix "Part " --suffix ":"
 ```
 
 You can also write a derived output name into an existing directory:
@@ -122,6 +123,7 @@ epub unpack combined.epub -d restored --force
 epub cover get book.epub -o cover.jpg
 epub cover get book.epub -o cover.jpg --force
 epub cover set book.epub cover.jpg
+epub cover set book.epub cover.jpg -o updated.epub
 epub cover replace book.epub new-cover.jpg
 epub cover replace book.epub new-cover.jpg -o updated.epub
 epub cover fix book.epub
