@@ -16,13 +16,13 @@ Use it as an EPUB metadata editor, EPUB merge tool, EPUB cover image utility, or
 ## Install
 
 ```sh
-npm install epubkit
+npm install @isalin/epubkit
 ```
 
 For the CLI as a global command:
 
 ```sh
-npm install -g epubkit
+npm install -g @isalin/epubkit
 ```
 
 `epubkit` requires Node.js 20 or newer.
@@ -105,7 +105,7 @@ epub cover fix book.epub
 ## Library
 
 ```js
-import { readInfo, readMetadata, updateMetadata } from "epubkit";
+import { readInfo, readMetadata, updateMetadata } from "@isalin/epubkit";
 
 const info = await readInfo("book.epub");
 const metadata = await readMetadata("book.epub");
@@ -121,7 +121,7 @@ await updateMetadata("book.epub", {
 Merge and unpack EPUB files:
 
 ```js
-import { mergeEpubs, unpackMergedEpub } from "epubkit";
+import { mergeEpubs, unpackMergedEpub } from "@isalin/epubkit";
 
 await mergeEpubs(["volume-1.epub", "volume-2.epub"], {
   output: "combined.epub",
@@ -139,7 +139,7 @@ await unpackMergedEpub("combined.epub", {
 Extract and replace EPUB cover images:
 
 ```js
-import { extractCover, replaceCover } from "epubkit";
+import { extractCover, replaceCover } from "@isalin/epubkit";
 
 await extractCover("book.epub", { output: "cover.jpg" });
 

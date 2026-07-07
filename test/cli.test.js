@@ -24,12 +24,12 @@ test("prints command help when called without arguments", async () => {
 test("published declarations compile for Node-only TypeScript consumers", async () => {
   const dir = await tempDir();
   const project = path.join(dir, "consumer");
-  await mkdir(path.join(project, "node_modules"), { recursive: true });
-  await symlink(path.resolve("."), path.join(project, "node_modules", "epubkit"), "dir");
+  await mkdir(path.join(project, "node_modules", "@isalin"), { recursive: true });
+  await symlink(path.resolve("."), path.join(project, "node_modules", "@isalin", "epubkit"), "dir");
   await writeFile(path.join(project, "package.json"), JSON.stringify({ type: "module" }, null, 2));
   await writeFile(
     path.join(project, "index.ts"),
-    `import { readEpub, readMetadataFromOpf } from "epubkit";
+    `import { readEpub, readMetadataFromOpf } from "@isalin/epubkit";
 
 async function inspect(file: string): Promise<string | undefined> {
   const epub = await readEpub(file);
