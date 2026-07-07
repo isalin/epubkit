@@ -8,7 +8,7 @@
   },
   "type": "module",
   "bin": {
-    "epub": "./dist/cli.js"
+    "epub": "dist/cli.js"
   },
   "exports": {
     ".": {
