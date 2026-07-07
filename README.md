@@ -165,4 +165,4 @@ npm test
 npm run build
 ```
 
-Publishing is handled by the manual GitHub Actions workflow. Configure the `NPM_TOKEN` repository secret before running it.
+Publishing is handled by the manual GitHub Actions workflow through npm trusted publishing and the protected `npm-publish` GitHub Environment. Do not add npm publish tokens to this repository.
