@@ -18,6 +18,7 @@ Use it as an EPUB metadata editor, EPUB merge tool, EPUB cover image utility, EP
 - [Library](#library)
 - [API Overview](#api-overview)
 - [FAQ](#faq)
+- [Project Docs](#project-docs)
 - [Safety Notes](#safety-notes)
 - [Development](#development)
 
@@ -217,6 +218,12 @@ Yes. `epubkit` can inspect and merge EPUB 2 and EPUB 3 files. EPUBs in a single 
 ### Can I replace an EPUB cover image?
 
 Yes. Use `epub cover replace book.epub new-cover.jpg`, or call `replaceCover()` from JavaScript or TypeScript.
+
+## Project Docs
+
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
 ## Safety Notes
 
