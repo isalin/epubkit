@@ -1,13 +1,10 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish, e.g. v1.0.2. Run from the same tag for npm provenance."
+        description: "Release tag to create and publish, e.g. v1.0.3. Must match package.json."
         required: true
         type: string
 
@@ -28,13 +25,14 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       tag: ${{ steps.release.outputs.tag }}
       sha: ${{ steps.release.outputs.sha }}
+      git_tag_exists: ${{ steps.release.outputs.git_tag_exists }}
       npm_published: ${{ steps.release.outputs.npm_published }}
       github_release_exists: ${{ steps.release.outputs.github_release_exists }}
       github_release_draft: ${{ steps.release.outputs.github_release_draft }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          ref: ${{ github.ref_name }}
 
       - uses: actions/setup-node@v4
         with:
@@ -74,6 +72,20 @@ jobs:
         with:
           ref: ${{ needs.preflight.outputs.sha }}
           fetch-depth: 0
+
+      - name: Fetch existing release tag
+        if: needs.preflight.outputs.git_tag_exists == 'true'
+        run: git fetch --force origin "refs/tags/${{ needs.preflight.outputs.tag }}:refs/tags/${{ needs.preflight.outputs.tag }}"
+
+      - name: Create release tag
+        if: needs.preflight.outputs.git_tag_exists != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ needs.preflight.outputs.tag }}" \
+            -m "${{ needs.preflight.outputs.tag }}" \
+            "${{ needs.preflight.outputs.sha }}"
+          git push origin "refs/tags/${{ needs.preflight.outputs.tag }}"
 
       - uses: actions/setup-node@v4
         with:

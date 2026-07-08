@@ -2,6 +2,14 @@
 
 All notable changes to `@isalin/epubkit` are documented here.
 
+## 1.0.3 - 2026-07-08
+
+- Changed EPUB merge ordering to use the listed input order by default, with `--sort` and the `sort` API option available for natural filename ordering.
+- Added validation for conflicting merge order options and kept `--preserve-order` as a compatibility no-op because preserving input order is now the default.
+- Added detailed help output for the `merge`, `meta`, `info`, `unpack`, and `cover` CLI subcommands.
+- Documented merge ordering, sorted merges, merge label prefix/suffix flags, and `epub cover set -o` output usage.
+- Hardened the npm release workflow with manual tag creation, tag/package/lockfile/changelog checks, changelog-derived release notes, draft GitHub release handling, and npm republish detection.
+
 ## 1.0.1 - 2026-07-07
 
 - Improved npm and GitHub discoverability metadata for EPUB CLI, parser, metadata, merge, cover, OPF, JavaScript, and TypeScript searches.

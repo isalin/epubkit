@@ -5,7 +5,6 @@ const releaseNotesPath = process.env.RELEASE_NOTES_PATH || "/tmp/release-notes.m
 const githubOutput = process.env.GITHUB_OUTPUT;
 const releaseTag = process.env.RELEASE_TAG || "";
 const refName = process.env.GITHUB_REF_NAME || "";
-const tag = releaseTag || refName;
 const refType = process.env.GITHUB_REF_TYPE || "";
 const eventName = process.env.GITHUB_EVENT_NAME || "";
 const repository = process.env.GITHUB_REPOSITORY || "";
@@ -35,6 +34,20 @@ function currentHeadSha() {
   } catch {
     return process.env.GITHUB_SHA || "";
   }
+}
+
+function resolveReleaseTag() {
+  if (eventName === "workflow_dispatch") {
+    if (!releaseTag) fail("Manual release runs must provide RELEASE_TAG");
+    if (refType === "tag" && refName && refName !== releaseTag) {
+      fail("Manual release runs dispatched from a tag must use that same tag as RELEASE_TAG");
+    }
+    return releaseTag;
+  }
+
+  if (refType !== "tag") fail("Release workflow must run on a Git tag or be manually dispatched");
+  if (releaseTag && releaseTag !== refName) fail(`RELEASE_TAG ${releaseTag} does not match workflow tag ${refName}`);
+  return releaseTag || refName;
 }
 
 function extractReleaseNotes(version) {
@@ -83,6 +96,34 @@ async function readNpmVersionState(packageName, version) {
   return { published: Boolean(metadata.versions?.[version]) };
 }
 
+function readGitTagState(tagName) {
+  let output;
+  try {
+    output = execFileSync("git", ["ls-remote", "--tags", "origin", `refs/tags/${tagName}`, `refs/tags/${tagName}^{}`], {
+      encoding: "utf8"
+    }).trim();
+  } catch (error) {
+    fail(`Could not check Git tag ${tagName}: ${error.message}`);
+  }
+
+  if (!output) return { exists: false, sha: "" };
+
+  const directRef = `refs/tags/${tagName}`;
+  const peeledRef = `${directRef}^{}`;
+  let directSha = "";
+  let peeledSha = "";
+
+  for (const line of output.split(/\r?\n/)) {
+    const [sha, ref] = line.split(/\s+/);
+    if (!sha || !ref) continue;
+    if (ref === peeledRef) peeledSha = sha;
+    if (ref === directRef) directSha = sha;
+  }
+
+  const sha = peeledSha || directSha;
+  return sha ? { exists: true, sha } : { exists: false, sha: "" };
+}
+
 async function readGitHubReleaseState(tagName) {
   if (!repository) fail("GITHUB_REPOSITORY is required to check GitHub releases");
 
@@ -114,16 +155,8 @@ const version = pkg.version;
 const lockVersion = lock.version;
 const lockPackageVersion = lock.packages?.[""]?.version;
 const sha = currentHeadSha();
+const tag = resolveReleaseTag();
 
-if (eventName === "workflow_dispatch") {
-  if (!releaseTag) fail("Manual release runs must provide RELEASE_TAG");
-  if (refType !== "tag" || refName !== releaseTag) {
-    fail("Manual release runs must be dispatched from the same Git tag as RELEASE_TAG so npm provenance matches the published package");
-  }
-} else {
-  if (refType !== "tag") fail("Release workflow must run on a Git tag");
-  if (releaseTag && releaseTag !== refName) fail(`RELEASE_TAG ${releaseTag} does not match workflow tag ${refName}`);
-}
 if (!/^v\d+\.\d+\.\d+$/.test(tag)) fail(`Release tag must look like vX.Y.Z, got "${tag}"`);
 if (!sha) fail("Could not determine the checked-out release commit SHA");
 if (!version) fail("package.json must contain a version");
@@ -135,9 +168,18 @@ if (lockPackageVersion !== version) {
 
 const releaseNotes = extractReleaseNotes(version);
 let npmState = { published: false };
+let gitTagState = { exists: refType === "tag", sha: refType === "tag" ? sha : "" };
 let githubReleaseState = { exists: false, draft: false };
 
 if (!skipRemoteChecks) {
+  gitTagState = readGitTagState(tag);
+  if (gitTagState.exists && gitTagState.sha !== sha) {
+    fail(`Git tag ${tag} already points to ${gitTagState.sha}, not release commit ${sha}`);
+  }
+  if (eventName !== "workflow_dispatch" && !gitTagState.exists) {
+    fail(`Git tag ${tag} was not found on origin`);
+  }
+
   npmState = await readNpmVersionState(pkg.name, version);
   githubReleaseState = await readGitHubReleaseState(tag);
   if (githubReleaseState.exists && !githubReleaseState.draft) {
@@ -151,6 +193,8 @@ if (githubOutput) {
   fs.appendFileSync(githubOutput, `version=${version}\n`);
   fs.appendFileSync(githubOutput, `tag=${tag}\n`);
   fs.appendFileSync(githubOutput, `sha=${sha}\n`);
+  fs.appendFileSync(githubOutput, `git_tag_exists=${gitTagState.exists}\n`);
+  fs.appendFileSync(githubOutput, `git_tag_sha=${gitTagState.sha}\n`);
   fs.appendFileSync(githubOutput, `npm_published=${npmState.published}\n`);
   fs.appendFileSync(githubOutput, `github_release_exists=${githubReleaseState.exists}\n`);
   fs.appendFileSync(githubOutput, `github_release_draft=${githubReleaseState.draft}\n`);
