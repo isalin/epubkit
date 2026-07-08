@@ -619,6 +619,10 @@ test("merges EPUB 3 books and unpacks exact originals", async () => {
   const nav = archiveText(merged, "EPUB/nav.xhtml");
   const opf = archiveText(merged, "EPUB/package.opf");
   assert.match(nav, /xmlns:epub="http:\/\/www\.idpf\.org\/2007\/ops"/);
+  assertTextOrder(nav, "book-10", "book-2");
+  assert.match(archiveText(merged, "EPUB/volumes/001/OEBPS/chapter.xhtml"), /Ten/);
+  assert.match(archiveText(merged, "EPUB/volumes/002/OEBPS/chapter.xhtml"), /Two/);
+  assertTextOrder(opf, "v1_chapter", "v2_chapter");
   assert.doesNotMatch(opf, /properties="[^"]*cover-image[^"]*"/);
   assert.ok(merged.files.has("META-INF/epubkit/manifest.json"));
   assert.ok([...merged.files.keys()].some((file) => file.startsWith("META-INF/epubkit/originals/")));
@@ -629,6 +633,47 @@ test("merges EPUB 3 books and unpacks exact originals", async () => {
   assert.deepEqual(restored.map((file) => path.basename(file)).sort(), ["book-10.epub", "book-2.epub"]);
   assert.deepEqual(await readFile(path.join(unpackDir, "book-10.epub")), await readFile(a));
   assert.deepEqual(await readFile(path.join(unpackDir, "book-2.epub")), await readFile(b));
+});
+
+test("sorts EPUB merge inputs by natural filename order when requested", async () => {
+  const dir = await tempDir();
+  const earlyDir = path.join(dir, "a");
+  const lateDir = path.join(dir, "z");
+  await mkdir(earlyDir);
+  await mkdir(lateDir);
+  const ten = path.join(earlyDir, "book-10.epub");
+  const two = path.join(lateDir, "book-2.epub");
+  await createEpub3(ten, { title: "Ten", heading: "Ten Heading" });
+  await createEpub3(two, { title: "Two", heading: "Two Heading" });
+  const out = path.join(dir, "merged-sorted.epub");
+
+  await mergeEpubs([ten, two], {
+    output: out,
+    title: "Sorted Merge",
+    sort: true,
+    volumeLabelsFromFiles: true
+  });
+
+  const merged = await readEpub(out);
+  const nav = archiveText(merged, "EPUB/nav.xhtml");
+  const opf = archiveText(merged, "EPUB/package.opf");
+  assertTextOrder(nav, "book-2", "book-10");
+  assert.match(archiveText(merged, "EPUB/volumes/001/OEBPS/chapter.xhtml"), /Two/);
+  assert.match(archiveText(merged, "EPUB/volumes/002/OEBPS/chapter.xhtml"), /Ten/);
+  assertTextOrder(opf, "v1_chapter", "v2_chapter");
+});
+
+test("rejects conflicting API merge order options", async () => {
+  const dir = await tempDir();
+  const a = path.join(dir, "a.epub");
+  const b = path.join(dir, "b.epub");
+  await createEpub3(a, { title: "A" });
+  await createEpub3(b, { title: "B" });
+
+  await assert.rejects(
+    () => mergeEpubs([a, b], { output: path.join(dir, "out.epub"), sort: true, preserveOrder: true }),
+    /Use either sort or preserveOrder, not both/
+  );
 });
 
 test("uses the resolved merge language in generated EPUB 3 nav", async () => {
@@ -2554,6 +2599,14 @@ function archiveText(epub, filePath) {
   const data = epub.files.get(filePath);
   assert.ok(data, `Expected ${filePath} in archive`);
   return Buffer.from(data).toString("utf8");
+}
+
+function assertTextOrder(text, first, second) {
+  const firstIndex = text.indexOf(first);
+  const secondIndex = text.indexOf(second);
+  assert.notEqual(firstIndex, -1, `Expected ${first}`);
+  assert.notEqual(secondIndex, -1, `Expected ${second}`);
+  assert.ok(firstIndex < secondIndex, `Expected ${first} before ${second}`);
 }
 
 function firstZipEntryName(archive) {

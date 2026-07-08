@@ -51,7 +51,8 @@ Options:
                           Use input filenames as volume labels.
   -p, --prefix <text>     Set the generated volume label prefix.
   -s, --suffix <text>     Set the generated volume label suffix.
-  -O, --preserve-order    Keep input order instead of sorting by reading order.
+  --sort                  Sort inputs by natural filename order before merging.
+  -O, --preserve-order    Compatibility no-op; input order is the default.
   -f, --force             Overwrite an existing output file.
   -q, --quiet             Suppress the written-file message.
 `;
@@ -146,6 +147,9 @@ async function runMerge(args: string[]): Promise<void> {
   const volumeLabelsValue = optString(parsed, "v", "volumes");
   const volumeLabelsFromFiles = hasOpt(parsed, "V", "volume-labels-from-files");
   if (volumeLabelsValue && volumeLabelsFromFiles) throw new Error("Use either -v or -V, not both");
+  if (hasOpt(parsed, "sort") && hasOpt(parsed, "O", "preserve-order")) {
+    throw new Error("Use either --sort or --preserve-order, not both");
+  }
   const defaultOutput = outputDir ? ensureExt(sanitizeFilename(title || commonFilenamePrefix(parsed.positionals)), ".epub") : undefined;
   const derivedOutput = outputName ? ensureExt(sanitizeFilename(outputName.replace(/\.epub$/i, "")), ".epub") : defaultOutput;
   const finalOutput = output || (derivedOutput ? (outputDir ? path.join(outputDir, derivedOutput) : derivedOutput) : undefined);
@@ -154,6 +158,7 @@ async function runMerge(args: string[]): Promise<void> {
     title,
     language,
     force: hasOpt(parsed, "f", "force"),
+    sort: hasOpt(parsed, "sort"),
     preserveOrder: hasOpt(parsed, "O", "preserve-order"),
     volumeLabels: volumeLabelsValue ? volumeLabelsValue.split("//").map((item) => item.trim()).filter(Boolean) : undefined,
     volumeLabelsFromFiles,

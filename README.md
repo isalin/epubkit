@@ -95,11 +95,13 @@ epub meta content.opf -t "Updated Package Title"
 ```sh
 epub merge volume-1.epub volume-2.epub -o combined.epub
 epub merge volume-1.epub volume-2.epub -o combined.epub -t "Combined Edition" -l en
-epub merge volume-1.epub volume-2.epub -o combined.epub --preserve-order
+epub merge book-*.epub -o combined.epub --sort
 epub merge volume-1.epub volume-2.epub -o combined.epub --volumes "Book One//Book Two"
 epub merge volume-1.epub volume-2.epub -o combined.epub --volume-labels-from-files
 epub merge volume-1.epub volume-2.epub -o combined.epub --prefix "Part " --suffix ":"
 ```
+
+Inputs are merged in the order you list them. Add `--sort` to sort input paths by natural filename order before merging, such as `book-2.epub` before `book-10.epub`. Chapters inside each source EPUB follow that EPUB's OPF spine order.
 
 You can also write a derived output name into an existing directory:
 
@@ -156,7 +158,6 @@ await mergeEpubs(["volume-1.epub", "volume-2.epub"], {
   output: "combined.epub",
   title: "Combined Edition",
   language: "en",
-  preserveOrder: true,
   volumeLabels: ["Book One", "Book Two"]
 });
 
@@ -164,6 +165,8 @@ await unpackMergedEpub("combined.epub", {
   outputDir: "restored"
 });
 ```
+
+`mergeEpubs` uses the array order by default. Set `sort: true` to sort input paths by natural filename order before merging.
 
 Extract and replace EPUB cover images:
 
@@ -204,6 +207,8 @@ Use `epub merge` and pass each input EPUB followed by an output path:
 ```sh
 epub merge volume-1.epub volume-2.epub -o combined.epub
 ```
+
+Files are merged in the order listed. Use `--sort` if you want natural filename ordering instead.
 
 ### Can I use epubkit from TypeScript?
 

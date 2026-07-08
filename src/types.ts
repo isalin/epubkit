@@ -71,6 +71,7 @@ export interface MergeOptions {
   title?: string;
   language?: string;
   force?: boolean;
+  sort?: boolean;
   preserveOrder?: boolean;
   volumeLabels?: string[];
   volumeLabelsFromFiles?: boolean;

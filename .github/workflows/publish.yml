@@ -1,22 +1,148 @@
 name: Publish to npm
 
 on:
+  push:
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish, e.g. v1.0.2. Run from the same tag for npm provenance."
+        required: true
+        type: string
 
 permissions:
   contents: read
-  id-token: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    environment: npm-publish
+  preflight:
+    name: Preflight release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      sha: ${{ steps.release.outputs.sha }}
+      npm_published: ${{ steps.release.outputs.npm_published }}
+      github_release_exists: ${{ steps.release.outputs.github_release_exists }}
+      github_release_draft: ${{ steps.release.outputs.github_release_draft }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Verify release metadata
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          RELEASE_NOTES_PATH: /tmp/release-notes.md
+        run: node .github/scripts/prepare-release.mjs
+
       - run: npm ci
+
       - run: npm test
-      - run: npm publish --provenance --access public
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: /tmp/release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish package and release
+    needs: preflight
+    environment: npm-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: /tmp/release-notes
+
+      - name: Verify release tag target
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ needs.preflight.outputs.sha }}"
+          test "$(git rev-list -n 1 "${{ needs.preflight.outputs.tag }}")" = "${{ needs.preflight.outputs.sha }}"
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Create draft GitHub Release
+        id: draft_release
+        if: needs.preflight.outputs.github_release_exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ needs.preflight.outputs.tag }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --draft \
+            --title "${{ needs.preflight.outputs.tag }}" \
+            --notes-file /tmp/release-notes/release-notes.md
+
+      - name: Update draft GitHub Release
+        if: needs.preflight.outputs.github_release_exists == 'true' && needs.preflight.outputs.github_release_draft == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "${{ needs.preflight.outputs.tag }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "${{ needs.preflight.outputs.tag }}" \
+            --notes-file /tmp/release-notes/release-notes.md
+
+      - name: Publish to npm
+        id: npm_publish
+        if: needs.preflight.outputs.npm_published != 'true'
+        run: npm publish --provenance --access public
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3; do
+            if gh release edit "${{ needs.preflight.outputs.tag }}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft=false \
+              --latest; then
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Delete draft release after npm publish failure
+        if: failure() && steps.draft_release.outcome == 'success' && steps.npm_publish.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "${{ needs.preflight.outputs.tag }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --yes || true

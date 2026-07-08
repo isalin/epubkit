@@ -28,6 +28,8 @@ test("prints subcommand help summaries", async () => {
   assert.match(merge.stdout, /--volume-labels-from-files/);
   assert.match(merge.stdout, /--prefix <text>/);
   assert.match(merge.stdout, /--suffix <text>/);
+  assert.match(merge.stdout, /--sort/);
+  assert.match(merge.stdout, /input order is the default/);
 
   const meta = await run(["meta", "--help"]);
   assert.match(meta.stdout, /epubkit meta/);
@@ -201,6 +203,42 @@ test("merges, inspects, and unpacks through the CLI", async () => {
   assert.deepEqual(await readFile(path.join(unpackDir, "b.epub")), await readFile(b));
 });
 
+test("sorts merge inputs naturally through the CLI when requested", async () => {
+  const dir = await tempDir();
+  const earlyDir = path.join(dir, "a");
+  const lateDir = path.join(dir, "z");
+  await mkdir(earlyDir);
+  await mkdir(lateDir);
+  const ten = path.join(earlyDir, "book-10.epub");
+  const two = path.join(lateDir, "book-2.epub");
+  const out = path.join(dir, "sorted.epub");
+  await createEpub3(ten, { title: "Ten", heading: "Ten Heading" });
+  await createEpub3(two, { title: "Two", heading: "Two Heading" });
+
+  await run(["merge", ten, two, "-o", out, "-t", "Sorted CLI Merge", "--sort"]);
+
+  const merged = await readEpub(out);
+  assert.match(archiveText(merged, "EPUB/volumes/001/OEBPS/chapter.xhtml"), /Two/);
+  assert.match(archiveText(merged, "EPUB/volumes/002/OEBPS/chapter.xhtml"), /Ten/);
+});
+
+test("rejects conflicting merge order flags through the CLI", async () => {
+  const dir = await tempDir();
+  const a = path.join(dir, "a.epub");
+  const b = path.join(dir, "b.epub");
+  const out = path.join(dir, "out.epub");
+  await createEpub3(a, { title: "A" });
+  await createEpub3(b, { title: "B" });
+
+  await assert.rejects(
+    () => run(["merge", a, b, "-o", out, "--sort", "--preserve-order"]),
+    (error) => {
+      assert.match(error.stderr, /Use either --sort or --preserve-order, not both/);
+      return true;
+    }
+  );
+});
+
 test("writes derived merge output inside the requested directory", async () => {
   const dir = await tempDir();
   const outDir = path.join(dir, "merged-output");
@@ -316,3 +354,9 @@ test("cover replace through the CLI refuses existing output unless forced", asyn
   assert.equal(await readFile(out, "utf8"), "existing output");
   assert.deepEqual(await readFile(book), before);
 });
+
+function archiveText(epub, filePath) {
+  const data = epub.files.get(filePath);
+  assert.ok(data, `Expected ${filePath} in archive`);
+  return Buffer.from(data).toString("utf8");
+}

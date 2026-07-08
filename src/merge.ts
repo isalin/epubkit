@@ -48,7 +48,8 @@ interface ChapterLink {
 
 export async function mergeEpubs(inputFiles: string[], options: MergeOptions = {}): Promise<string> {
   if (inputFiles.length < 2) throw new Error("merge requires at least two EPUB files");
-  const ordered = options.preserveOrder ? [...inputFiles] : [...inputFiles].sort(naturalCompare);
+  if (options.sort && options.preserveOrder) throw new Error("Use either sort or preserveOrder, not both");
+  const ordered = options.sort ? [...inputFiles].sort(compareInputFilenames) : [...inputFiles];
   const components: MergeComponent[] = [];
   for (let i = 0; i < ordered.length; i += 1) {
     const source = ordered[i]!;
@@ -93,6 +94,10 @@ export async function mergeEpubs(inputFiles: string[], options: MergeOptions = {
     throw error;
   }
   return output;
+}
+
+function compareInputFilenames(a: string, b: string): number {
+  return naturalCompare(path.basename(a), path.basename(b)) || naturalCompare(a, b);
 }
 
 async function existingRealPath(filePath: string): Promise<string | undefined> {
